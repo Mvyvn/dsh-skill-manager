@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-08-18
+
+### Fixed
+
+- **「跟随默认」误判成全部启用（P0）** — 清掉会话 override 时，host 把 `null`
+  传给 `syncActiveGroup(null)`，而 `null !== undefined` 是真，导致 activeId 变成
+  `null` → 磁盘被重排成「全部启用」，而不是回落到默认组。现在清 override 时显式
+  传 `state.defaultGroup`（或无参回落），默认组是受限组时不会再错误地全量放开技能。
+- **任何分组/导入/删除操作都会冲掉已生效的会话 override（P1）** —
+  `afterGroupChange()` 原先无条件按 `defaultGroup` 重排磁盘，用户刚切好的会话组会被
+  静默重置回默认组。现引入持久化的 `state.lastActive`（最近一次生效的盘上组）：
+  管理操作（import/delete/改分组/删组/改默认组）都沿用 `lastActive` 而不是回退默认，
+  只有主动选组/设默认组/删除该组时才更新它。UI 选中的组与实际模型目录保持一致。
+- **每次启用都读改写整份 `SKILL.md`（P2）** — `enableSkill` 在改名后还会全文搜索
+  `disable-model-invocation` 标记并重写；改名方案根本不需要该标记存在，逐次读改写
+  既慢又有写坏 UTF-8 的风险。现在改为仅在启动时统一清理一次残留标记
+  （`cleanupLegacyMarkers()`），启停只做原子改名。
+
 ## [1.1.0] - 2026-08-18
 
 ### Added
