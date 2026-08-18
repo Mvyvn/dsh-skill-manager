@@ -151,8 +151,4 @@ dsh-skill-manager/
 
 ## 许可证
 
-[MIT](LICENSE) © 2025 沐云 (Mvyvn)
-
----
-
-<div align="center">Made with ❤️ for the DSH community</div>
+[MIT](LICENSE) © 2026 沐云 (Mvyvn)

@@ -152,7 +152,3 @@ Details: [docs/how-it-works.md](docs/how-it-works.md) and [docs/architecture.md]
 ## License
 
 [MIT](LICENSE) © 2026 沐云 (Mvyvn)
-
----
-
-<div align="center">Made with ❤️ for the DSH community</div>
