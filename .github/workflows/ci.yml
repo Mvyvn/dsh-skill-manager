@@ -1,0 +1,20 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Syntax check (host + client)
+        run: node --check lib/index.js && node --check lib/client.js
+      - name: Validate package.json
+        run: node -e "const p=require('./package.json'); if(p.name!=='dsh-skill-manager') throw new Error('bad name'); if(!p.dsh||!p.dsh.bundle||!p.dsh.client) throw new Error('missing dsh manifest')"

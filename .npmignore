@@ -1,0 +1,9 @@
+# The published package only needs the plugin itself; README/LICENSE are
+# included automatically by npm.
+docs/
+scripts/
+screenshots/
+.github/
+.gitignore
+.npmignore
+CHANGELOG.md

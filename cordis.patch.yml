@@ -1,0 +1,9 @@
+# dsh-skill-manager bundle patch
+#
+# Mounts the host half as one plugin row in the web profile composition.
+# The row makes the package a loader entry, which also lets
+# dsh-client-modules scan its dsh.client declaration and serve the browser
+# bundle from exports["./client"]. No approval: it is part of the profile.
+- insert:
+    - id: skill-manager
+      name: 'dsh-skill-manager'

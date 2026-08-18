@@ -1,0 +1,21 @@
+# dependencies / build artifacts
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# logs
+*.log
+npm-debug.log*
+
+# local machine files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# backups / editor
+*.bak
+*.orig
+.vscode/
+.idea/
+*.local

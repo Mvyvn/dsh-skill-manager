@@ -1,0 +1,58 @@
+{
+  "name": "dsh-skill-manager",
+  "version": "1.0.0",
+  "description": "DSH Skill Manager — scan/import/upload skills, group enable/disable (atomic SKILL.md rename) that reshapes the model skill catalog, default group + per-session picker, all-Chinese web UI. Installed as a real web-profile plugin: auto-loads on every dsh web start, no approval needed.",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "skills",
+    "cordis.patch.yml"
+  ],
+  "scripts": {
+    "check": "node --check lib/index.js && node --check lib/client.js"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": "*",
+    "@deepseek-ai/dsh-client-runtime": "*",
+    "@deepseek-ai/dsh-client-ui-slots": "*"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "skills",
+    "skill-manager",
+    "cordis"
+  ],
+  "author": "沐云 (Mvyvn) <mvyvn@qq.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/Mvyvn/dsh-skill-manager",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mvyvn/dsh-skill-manager.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Mvyvn/dsh-skill-manager/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
