@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`get-session` RPC endpoint** — the input-bar group picker now queries the
   current session's override through the RPC channel (previously only a model
   tool existed, so the picker always reset to the default group).
+- **输入栏切组立即生效（方案 A）** — `set-session-group` RPC and
+  `skillmg_set_session_group` now call `syncActiveGroup()` after recording the
+  override, re-shaping the on-disk `SKILL.md`/`SKILL.md.disable` set to the
+  picked group so the current session's skill injection changes right away
+  (the on-disk names are global, so other sessions switch too — the documented
+  trade-off of the disk-rename scheme).
 
 ### Fixed
 
