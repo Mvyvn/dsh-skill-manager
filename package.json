@@ -1,6 +1,6 @@
 {
   "name": "dsh-skill-manager",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "DSH Skill Manager — scan/import/upload skills, group enable/disable (atomic SKILL.md rename) that reshapes the model skill catalog, default group + per-session picker, all-Chinese web UI. Installed as a real web-profile plugin: auto-loads on every dsh web start, no approval needed.",
   "type": "module",
   "main": "lib/index.js",
@@ -11,6 +11,7 @@
   },
   "files": [
     "lib",
+    "presets",
     "skills",
     "cordis.patch.yml"
   ],

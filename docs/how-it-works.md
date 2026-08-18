@@ -49,13 +49,59 @@ DSH 的技能发现由官方包 `@deepseek-ai/dsh-skill-filesystem` 实现。关
 - **`.disable` 文件**：`SKILL.md.disable` 的 frontmatter 与 `SKILL.md` 一致，`readSummaryFile` 可还原技能摘要。
 - **兼容性**：若未来官方改变文件名发现规则，插件可平滑回退到"插标记"方案（`enableSkill` 的清理逻辑已证明具备该能力）。
 
-## 5. 配置与锁
+## 5. 多根加载问题与 skill-only 预设
+
+> ⚠️ 这是「切组不生效」的最常见根因，务必阅读。
+
+### 问题
+
+DSH 的技能发现（`dsh-skill-filesystem` 的 `roots()`）默认从**多个根**合并：
+
+| 根 | 路径 | 优先级 |
+| --- | --- | --- |
+| 项目根 | `<projectRoot>/.dsh/skills`、`<projectRoot>/.agents/skills` | 高 |
+| 自定义根 | `customSkillDirs` | 中 |
+| 用户根 | `$DSH_HOME/skills`（本插件导入目标）、`~/.agents/skills`（user-agents） | 低 |
+| bundled | 安装自带 | 最低 |
+
+同名技能按根优先级仲裁，**但所有根里发现的技能都会进入合并目录**。
+本插件的原子改名**只作用于 `$DSH_HOME/skills`（导入目标）**那一份——若同一技能
+在 `~/.agents/skills`（或项目根）里仍是未改名的 `SKILL.md`，DSH 照样发现它，
+分组启停就对它无效。这就是为什么装了插件后切组看起来"没反应"。
+
+### 解决方案：skill-only 预设
+
+让 DSH **只从 `$DSH_HOME/skills` 一个根**发现技能。做法是给 DSH 提供一份
+基于 `standard` 复制的 agent preset，其 `skill-filesystem` 行配置：
+
+```yaml
+- id: skill-filesystem
+  name: '@deepseek-ai/dsh-skill-filesystem'
+  config:
+    includeDefaultRoots: false   # 关闭 $DSH_HOME/skills、~/.agents/skills 等默认根
+    customSkillDirs:
+      - "C:\\Users\\<你>\\.dsh\\skills"   # 只保留导入目标这一个根
+```
+
+- `includeDefaultRoots: false` 让 `~/.agents/skills`、项目根等**全部退出**发现；
+- `customSkillDirs` 明确只扫导入目标；
+- 分组启停因此变成**唯一权威**：改名哪个根就影响哪个，切组立即全局生效。
+
+仓库已提供可直接复制的模板 `presets/skill-only/agent.cordis.yml`（完整编码 agent，
+仅此一行与 standard 不同）。启用步骤见 README「重要」章节。
+
+> 为什么不直接改 `skill-filesystem` 默认配置？
+> 因为 web 模式下技能发现由各 **agent preset** 自己的 `skill-filesystem` 行负责
+> （全局行被 `dsh-web-app` 禁用），而 shipped preset 属于部署自带、不可修改。
+> 新建 user preset 是官方支持的扩展方式，升级不受影响。
+
+## 6. 配置与锁
 
 - 配置存于 `$DSH_HOME/skill-mgmt.json`；
 - 写入前先 `open(LOCK_PATH, 'wx')` 原子创建 `skill-mgmt.json.lock`（`EEXIST` = 他进程持锁，轮询等待最多 10s）；
 - 锁可重入（`lockDepth`），嵌套的 persist/sync 不会死锁；`finally` 中释放并删除锁文件。
 
-## 6. 术语对照
+## 7. 术语对照
 
 | 本插件 | DSH 官方概念 |
 | --- | --- |

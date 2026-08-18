@@ -5,6 +5,40 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-08-18
+
+### Added
+
+- **skill-only preset template** (`presets/skill-only/agent.cordis.yml`) — make DSH
+  discover skills from `$DSH_HOME/skills` only (`includeDefaultRoots: false` +
+  `customSkillDirs`), so `~/.agents/skills` no longer bypasses group switching.
+  Docs: README「重要」section + `docs/how-it-works.md` §5.
+- **`skillmg_delete` model tool + `/skillmg/delete` RPC endpoint** — delete an
+  imported skill from `$DSH_HOME/skills` (import-target copy only; the source
+  directory is untouched); the skill is removed from every group and the active
+  group policy is re-applied.
+- **`get-session` RPC endpoint** — the input-bar group picker now queries the
+  current session's override through the RPC channel (previously only a model
+  tool existed, so the picker always reset to the default group).
+
+### Fixed
+
+- **Delete was a no-op** — `rm()` received an fs-service token object instead of
+  a native path string (`resolve()` returns a token, not a path); now passes the
+  real `joinPath(importTarget, name)` path.
+- **Group picker snapped back to the default group** — the client called a
+  `get-session` endpoint the RPC handler did not serve; the endpoint now exists
+  and returns the per-session override when present.
+- **Uploading a parent folder created a nested `skills/` layer** — browser
+  `webkitRelativePath` is relative to the *selected* folder, so picking an
+  ancestor carried intermediate directories. Upload grouping now rebases every
+  file to the detected skill's own directory: scanning
+  `...\skills\ui-ux-pro-max\SKILL.md` imports exactly
+  `<importTarget>/ui-ux-pro-max/...` regardless of which ancestor was selected
+  (verified for parent / grandparent / skill-folder / sibling selections).
+- **Zip upload path race** — a `var` closure captured the wrong loop entry for
+  large uploads; switched to block-scoped capture.
+
 ## [1.0.0] - 2025-XX-XX
 
 ### Added
