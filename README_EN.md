@@ -17,7 +17,7 @@ Scan official skill roots · one-click import / upload · group enable & disable
 
 ## What is this?
 
-DSH Skill Manager is a **real web-profile plugin** (not a temporary dynamic plugin): it loads automatically with every `dsh web` start and needs no approval. It turns DSH's model skill catalog into a manageable state:
+DSH Skill Manager is a **web-profile plugin**: it loads automatically with every `dsh web` start and needs no approval. It turns DSH's model skill catalog into a manageable state:
 
 - **Scan** — list every skill under `~/.agents/skills`, `$DSH_HOME/skills`, etc. (name, description, imported?, disabled?);
 - **Import / upload** — copy skills into `$DSH_HOME/skills` (DSH loads it with higher priority than `~/.agents/skills`) with one click, or upload a `.zip` archive / a whole folder straight from the browser;

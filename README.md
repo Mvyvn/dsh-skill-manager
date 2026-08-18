@@ -17,7 +17,7 @@
 
 ## 这是什么
 
-DSH Skill Manager 是一个**真实安装的 web-profile 插件**（不是临时动态插件）：随 `dsh web` 启动自动加载、无需审批。它把 DSH 的模型技能目录变成可管理的状态——
+DSH Skill Manager 是一个**web-profile 插件**：随 `dsh web` 启动自动加载、无需审批。它把 DSH 的模型技能目录变成可管理的状态——
 
 - **扫描**：列出 `~/.agents/skills`、`$DSH_HOME/skills` 等来源目录里的全部技能（名称、描述、是否已导入、是否被禁用）；
 - **导入 / 上传**：一键把来源技能复制进 `$DSH_HOME/skills`（DSH 加载优先级高于 `~/.agents/skills`），也可以直接在浏览器里上传 `.zip` 压缩包或整个文件夹；
