@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.4] - 2026-09-24
+
+### Fixed
+
+- **scope 引擎下部分配置改动只留在内存、重启即丢**。`syncActiveGroup()` 在 scope 模式下改为
+  「一次性磁盘规范化后直接 return」，而**会改动 `state` 的调用方一直依赖它来落盘**：
+  `set-session-group`（RPC 与 `skillmg_set_session_group` 工具）写 `perSessionGroups`、
+  `deleteSkills` 从所有分组里摘掉该技能。于是会话选组在界面上当场生效、重启后却消失。
+  修复：scope 模式分支在规范化之后补一次 `persist()`（带跨进程锁），覆盖上述全部调用方。
+  离线回归测试：在内存 fs 上驱动 `skillmg_set_session_group`，断言写出的配置里
+  `perSessionGroups[<会话>] === 'default'` 且 `defaultGroup` 不被改动 → PASS。
 ## [1.3.3] - 2026-09-24
 
 ### Fixed
