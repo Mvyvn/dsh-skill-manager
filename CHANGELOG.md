@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.3] - 2026-09-24
+
+### Fixed
+
+- **设置页永远停在「正在加载技能列表…」、分组列表空白**（配置其实完好）。DSH 0.1.7 只挂载**一个**
+  浏览器通道 `/api`：自定义 `rpc.handle('/skillmg', …)` 通道会登记但**不会产生可路由的端点**
+  （实测 `POST /skillmg/get-config` → 405，而 `/api` 正常应答），而 `/api` 共享通道的唯一
+  interceptor 槽位已被 `dsh-api-gateway` 占用。改用官方支持的形态：在 `/api` 下注册**精确 Fetch
+  路由** `POST /api/skillmg`（与 `/api/file`、上传路由同一约定），请求体 `{ method, payload }`；
+  客户端优先走它，遇到 404/405 再回退旧版 per-channel 信封。`get-config` 现在回报 `rpc` 模式，
+  host 启动日志打印 `rpc=api-fetch-route`。
+- **指南技能在 scope 引擎下被分组隐藏**：引擎新增 `alwaysVisibleNames` 豁免，`skill-grouping`
+  在任何分组（含 `__all_off__`）下都保持可见——与 rename 引擎的豁免保持一致。
+
+验证：RPC harness 端到端跑通（`apply()` 注册 `/api/skillmg [POST]`、不注册 legacy 通道；
+`get-config`/`scan`/未知方法/畸形请求体全部 200 并有可读结果），客户端与 host 双份同步修改。
 ## [1.3.2] - 2026-09-24
 
 ### Fixed

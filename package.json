@@ -1,6 +1,6 @@
 {
   "name": "dsh-skill-manager",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "DSH Skill Manager — scan/import/upload skills, per-session group enable/disable that reshapes the model skill catalog, default group + per-session picker, all-Chinese web UI. DSH >= 0.1.7 gets an in-memory per-session engine (no disk writes, sessions can hold different groups at once); older DSH falls back to the atomic SKILL.md rename engine plus the bundled skill-only agent-preset applier.",
   "type": "module",
   "main": "lib/index.js",
