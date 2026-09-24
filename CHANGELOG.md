@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2026-09-24
+
+### Fixed
+
+- **启动即崩：`dshHome` 初始化触发时间死区（TDZ）**。`const dshHome = … || joinPath(homedir(), '.dsh')`
+  这个初始化表达式会调用 `joinPath()` → `sep()` → 读 `dshHome`，而此刻它还在 TDZ 中，于是抛
+  `ReferenceError: Cannot access 'dshHome' before initialization`。只要 `dshHomePath` 服务不可用且
+  宿主进程环境里没有 `DSH_HOME` 就会走这条回退分支（0.1.7 web profile 不提供 `dshHomePath`，
+  所以这是常规路径）。修复：初始化改为内联推导分隔符，不再经由 `joinPath`/`sep`；并打印实际来源
+  （`dshHomePath` / `DSH_HOME` / `homedir`）便于排查。
+  为什么只在"用户启动的进程"复现：工具子进程由 `dsh-shell-env` 注入 `DSH_HOME`，而从工具 shell
+  启动的实例继承了它，于是走了另一分支、绕开了 TDZ。
+- 同源的 inject 问题（1.3.1）：未声明 `skills` 导致 `apply()` 在属性访问时抛错。
 ## [1.3.1] - 2026-09-24
 
 ### Fixed
