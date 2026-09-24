@@ -5,6 +5,44 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-09-24
+
+### Added
+
+- **`scripts/apply-skill-only-preset.mjs`** —— 一键把 `skill-only` 预设写进 profile
+  组合（`$DSH_HOME/profiles/<profile>/cordis.patch.yml`）并设为默认，写前自动备份；
+  `--refresh` 在 DSH 升级后重新对齐官方插件表，`--dry-run` 只看不写，重复运行幂等。
+  预设的**能力表从本机已安装的** `@deepseek-ai/dsh-web-app/presets/standard.patch.yml`
+  复制（只替换 `skill-filesystem` 一行为 `includeDefaultRoots: false` +
+  `customSkillDirs: [导入目标]`，根目录取自 `skill-mgmt.json` 的 `importTarget`），
+  因此不会再出现"仓库里的模板快照与当前 DSH 漂移"的问题。
+- **`presets/README.md`** —— 记录生成物形状、为何不再附带完整模板，以及 0.1.6 → 0.1.7
+  的预设机制对照。
+
+### Fixed
+
+- **DSH 0.1.7 下 `skillmg_*` 工具全部失效** —— 0.1.7 的工具层开始校验工具返回值是否
+  符合声明的输出 schema，而 12 个工具都声明了 `{ type: 'string' }` 却返回对象/数组，
+  于是每次调用都报 `tool "skillmg_..." returned invalid output: "value" must be a
+  string`。现按官方 author DSL 改声明为 `{ type: 'json' }`（即"任意 JSON 值"，与
+  `@deepseek-ai/dsh-tool-cordis` 的做法一致）。用官方 `validateJsonSchemaValue` 实测：
+  旧声明对对象/数组/空数组一律 REJECTED，新声明一律 ACCEPTED。
+- **DSH 0.1.7 下会话恢复失败 `Unknown agent preset: skill-only`** —— 0.1.7 起
+  `dsh-agent-preset-registry` 不再扫描 `$DSH_HOME/.agent-presets/<id>/`，预设改为
+  profile 组合里的 `@deepseek-ai/dsh-agent-preset` 声明行，默认值来自
+  `agent-preset-registry` 行的 `config.default`；`settings.yaml` 也被导入为
+  `settings.yaml.imported` 后不再读取。旧的目录式预设因此既不报错也不生效，只让
+  绑定了它的会话恢复失败。现由上面的脚本重新声明，官方 `dsh --dump-config` 实测
+  组合结果为 `preset-skill-only` + `agent-preset-registry.config.default: skill-only`。
+- `textOf()` 对 `undefined` 做保护（`JSON.stringify(undefined)` 会得到 `undefined`，
+  渲染层要求 `text` 必须是字符串）。
+
+### Removed
+
+- `presets/skill-only/agent.cordis.yml` —— 0.1.1 时代的目录式预设模板（携带当时的
+  `standard` 副本）。0.1.7 不再读取该形式，留着只会造成"以为改了其实没生效"的误导；
+  迁移方式见 `presets/README.md` 与 `scripts/apply-skill-only-preset.mjs`。
+
 ## [1.1.1] - 2026-08-18
 
 ### Fixed

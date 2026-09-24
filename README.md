@@ -45,7 +45,17 @@ bash scripts/install.sh
 
 ## ⚠️ 让分组启停真正生效（skill-only 预设）
 
-DSH 默认从多个根合并加载技能（如 `~/.agents/skills`）。分组启停只作用于导入目标那一份，若 DSH 从其他根发现同名技能，切换分组就不会生效。解决：让 DSH 只从 `$DSH_HOME/skills` 一个根发现技能——仓库提供了现成的 `presets/skill-only` 预设模板，按模板头注释复制并设为本机默认预设（`settings.yaml` 加 `agent-presets: { default: skill-only }`），重启 `dsh web` 即生效。原理见 [docs/how-it-works.md](docs/how-it-works.md#5-多根加载问题与-skill-only-预设)。
+DSH 默认从多个根合并加载技能（`~/.agents/skills`、项目根、bundled 等）。分组启停只作用于导入目标那一份，若同一技能还能从别的根被发现，切组就不会生效。解决：给 DSH 一个只从 `$DSH_HOME/skills` 发现技能的 agent preset，仓库提供一键脚本：
+
+```bash
+node scripts/apply-skill-only-preset.mjs             # 追加 skill-only 预设，并设为默认
+node scripts/apply-skill-only-preset.mjs --refresh   # DSH 升级后重新对齐官方插件表
+node scripts/apply-skill-only-preset.mjs --dry-run   # 只看会写入什么
+```
+
+脚本从**你本机已安装的** `@deepseek-ai/dsh-web-app/presets/standard.patch.yml` 复制完整能力表，只把其中的 `skill-filesystem` 改成单一根（`includeDefaultRoots: false` + `customSkillDirs: [导入目标]`），因此 DSH 升级后不会和官方预设漂移；写前自动备份该 profile 的 `cordis.patch.yml`。之后**完全重启 `dsh web`**。原理见 [docs/how-it-works.md](docs/how-it-works.md#5-多根加载问题与-skill-only-预设)。
+
+> **DSH 版本差异**：0.1.7 起，预设是 profile 组合里的**声明式行**（`@deepseek-ai/dsh-agent-preset`），默认值来自 `agent-preset-registry` 行的 `config.default`；0.1.6 及更早则是 `$DSH_HOME/.agent-presets/<id>/` 目录 + `settings.yaml` 的 `agent-presets.default`。**旧目录形式在 0.1.7 已被完全移除**（`settings.yaml` 也只剩 `settings.yaml.imported`），继续留在那里会让会话恢复直接失败：`Unknown agent preset: <id> (gateway/internal)`。
 
 ## 配置
 
@@ -76,9 +86,9 @@ DSH 默认从多个根合并加载技能（如 `~/.agents/skills`）。分组启
 ```
 dsh-skill-manager/
 ├── lib/          # 宿主端 index.js + 浏览器端 client.js
-├── presets/      # skill-only 预设模板（让分组启停生效）
+├── presets/      # 预设格式说明（0.1.7 起由 scripts/apply-skill-only-preset.mjs 生成）
 ├── skills/       # 自动维护的 companion 技能 skill-grouping
-├── scripts/      # 安装脚本 install.ps1 / install.sh
+├── scripts/      # 安装脚本 + apply-skill-only-preset.mjs（写入 skill-only 预设）
 ├── docs/         # 架构、原理、上手文档
 ├── screenshots/
 ├── cordis.patch.yml
@@ -88,7 +98,8 @@ dsh-skill-manager/
 ## 工作机制与限制
 
 - 停用 = `SKILL.md` 原子改名 `SKILL.md.disable`，技能从模型目录消失；启用 = 改回。依赖 DSH（rc 系列）「只识别精确文件名 `SKILL.md`」的语义；若官方改变此规则需回退 `disable-model-invocation` 字段方案（代码已兼容并会清理旧标记）。
-- 多根加载会绕过分组启停——按上文启用 **skill-only 预设**即可解决。
+- 多根加载会绕过分组启停——按上文用 `scripts/apply-skill-only-preset.mjs` 启用 **skill-only 预设**即可解决。
+- **DSH 0.1.7+**：`skillmg_*` 工具的返回值会按声明的输出 schema 校验（声明为 `{ type: 'json' }`）；0.1.6 及更早不校验，因此本插件同时兼容两个分支。
 - 会话级覆盖（`perSessionGroups`）当前仅记录，模型目录仍由默认组决定。
 - 主要在 Windows 开发测试；macOS/Linux 路径使用 `~` 与 `$DSH_HOME` 语义，欢迎反馈。
 - 浏览器上传仅支持文本文件（SKILL.md 场景），单文件 ≤ 2MB，总内容 ≤ 16MB。

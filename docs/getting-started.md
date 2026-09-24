@@ -66,7 +66,20 @@ cp -r lib cordis.patch.yml package.json ~/.dsh/profiles/web/node_modules/dsh-ski
 
 - 有另一个 dsh 进程正持锁超过 10 秒；等它完成后重试即可（锁是临时文件，异常退出也会在下次 `open('wx')` 竞争时被释放语义处理——如果残留了 `.lock` 文件且确认没有其他进程在写，可以手动删除）。
 
+### 报 `Unknown agent preset: <id> (gateway/internal)`
+
+DSH 0.1.7 起，agent 预设改成 profile 组合里的声明式行（`@deepseek-ai/dsh-agent-preset`），
+`$DSH_HOME/.agent-presets/<id>/` 目录形式与 `settings.yaml` 的 `agent-presets` 段都已废弃。
+如果某会话绑定的预设只存在于旧目录，恢复该会话就会报这个错。修复：
+
+```bash
+node scripts/apply-skill-only-preset.mjs    # 重新声明 skill-only 预设并设为默认
+```
+
+然后完全重启 `dsh web`。原理与迁移对照见 [工作原理 §5](how-it-works.md#017-的预设机制变更从旧版迁移)。
+
 ### 插件没有生效
 
 - 确认没有把插件同时手动添加进 profile 的 `cordis.patch.yml`（会重复挂载）；
-- 确认没有动过 DSH 自带的 `config/agent-presets`（那是官方预设，升级会被覆盖）。
+- 确认没有改动 DSH 自带的官方预设声明行（`preset-standard` / `preset-cordis` 等，升级会被覆盖）；
+- 想让分组启停生效，还需启用 skill-only 预设：`node scripts/apply-skill-only-preset.mjs`。

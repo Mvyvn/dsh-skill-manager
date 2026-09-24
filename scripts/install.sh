@@ -20,3 +20,7 @@ cp "$REPO_ROOT/package.json" "$TARGET/"
 
 echo "[dsh-skill-manager] installed to $TARGET"
 echo "Now FULLY restart 'dsh web' (stop the process, then start it again) - a page refresh is not enough."
+echo
+echo "Group enable/disable only takes effect when DSH discovers the import target alone."
+echo "Run this once to install the skill-only preset (DSH >= 0.1.7):"
+echo "  node \"$REPO_ROOT/scripts/apply-skill-only-preset.mjs\""

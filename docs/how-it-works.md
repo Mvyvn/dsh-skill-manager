@@ -44,10 +44,10 @@ DSH 的技能发现由官方包 `@deepseek-ai/dsh-skill-filesystem` 实现。关
 ## 4. 细节与边界
 
 - **双根处理**：同一技能同时存在于来源目录与导入目标时，两个 `SKILL.md` 都会被改名/改回；导入目标状态优先。
-- **旧标记清理**：启用时如果 `SKILL.md` 里残留历史 `disable-model-invocation` 行（旧方案产物），会顺带移除，保证文件干净。
+- **旧标记清理**：插件启动时统一扫一遍所有候选 `SKILL.md` / `SKILL.md.disable`，移除历史方案残留的 `disable-model-invocation` 行（`cleanupLegacyMarkers()`）；启停本身只做原子改名，完全不读写文件内容。
 - **扫描顺序**：导入目标排在最后扫描，同技能名去重时以导入目标状态为准。
 - **`.disable` 文件**：`SKILL.md.disable` 的 frontmatter 与 `SKILL.md` 一致，`readSummaryFile` 可还原技能摘要。
-- **兼容性**：若未来官方改变文件名发现规则，插件可平滑回退到"插标记"方案（`enableSkill` 的清理逻辑已证明具备该能力）。
+- **兼容性**：若未来官方改变文件名发现规则，插件可回退到"插标记"方案（启动清理逻辑同样适用于读取+改回标记）。
 
 ## 5. 多根加载问题与 skill-only 预设
 
@@ -87,12 +87,34 @@ DSH 的技能发现（`dsh-skill-filesystem` 的 `roots()`）默认从**多个�
 - `customSkillDirs` 明确只扫导入目标；
 - 分组启停因此变成**唯一权威**：改名哪个根就影响哪个，切组立即全局生效。
 
-仓库已提供可直接复制的模板 `presets/skill-only/agent.cordis.yml`（完整编码 agent，
-仅此一行与 standard 不同）。启用步骤见 README「重要」章节。
+启用方式（**DSH ≥ 0.1.7**）：
+
+```bash
+node scripts/apply-skill-only-preset.mjs             # 追加预设 + 设为默认
+node scripts/apply-skill-only-preset.mjs --refresh    # DSH 升级后重新对齐 standard 插件表
+```
+
+脚本会从本机已安装的 `@deepseek-ai/dsh-web-app/presets/standard.patch.yml`
+复制完整插件表（因此升级 DSH 后不会与官方预设漂移），只替换 `skill-filesystem`
+这一行，并把 `agent-preset-registry` 的 `config.default` 指向 `skill-only`。
+`presets/README.md` 记录了生成物的形状，便于手工核对。
+
+### 0.1.7 的预设机制变更（从旧版迁移）
+
+| | DSH ≤ 0.1.6 | DSH ≥ 0.1.7 |
+| --- | --- | --- |
+| 预设定义 | 目录 `$DSH_HOME/.agent-presets/<id>/`（`preset.yml` + `agent.cordis.yml`） | profile 组合里的声明式行 `@deepseek-ai/dsh-agent-preset`（官方自带的在 `@deepseek-ai/dsh-web-app/presets/*.patch.yml`） |
+| 默认预设 | `settings.yaml` → `agent-presets.default` | `agent-preset-registry` 行的 `config.default` |
+| 用户配置文件 | `settings.yaml` | `$DSH_HOME/profiles/<name>/cordis.patch.yml`（`settings.yaml` 被导入为 `settings.yaml.imported` 后不再读取） |
+| 自定预设丢失时 | — | 会话恢复报 `Unknown agent preset: <id> (gateway/internal)` |
+
+0.1.7 的 `dsh-agent-preset-registry` **不再扫描任何预设目录**：它只从 Loader 树里
+读声明行（`agentPresets.register(definition)`，`definition` 必须含 `id` 与 `plugins`）。
+所以旧目录里的 preset 不会报错、也不会生效，只会在会话恢复时找不到 id。
 
 > 为什么不直接改 `skill-filesystem` 默认配置？
 > 因为 web 模式下技能发现由各 **agent preset** 自己的 `skill-filesystem` 行负责
-> （全局行被 `dsh-web-app` 禁用），而 shipped preset 属于部署自带、不可修改。
+> （全局行被 `dsh-web-app` 显式 `disabled: true`），而 shipped preset 属于部署自带、不可修改。
 > 新建 user preset 是官方支持的扩展方式，升级不受影响。
 
 ## 6. 配置与锁
