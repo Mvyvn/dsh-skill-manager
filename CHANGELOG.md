@@ -5,6 +5,37 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-09-24
+
+### Added
+
+- **按会话的可见性引擎（scope engine）—— 不再需要自定义预设，也不再动磁盘**。
+  DSH ≥ 0.1.7 的技能注册表是按 scope 分层的：一次读取合并"全局层 + 观察者 scope 链"，
+  **跨层同名由更近的层直接胜出**，而一个会话（agent）本身就是 scope key、父级是所属预设层。
+  于是插件在 `agent/created` 里通过 `agent.ctx.get('skills')` 把"要隐藏的技能"以同名 +
+  `invocation.modelInvocable = false` 的运行时条目注册进**该会话自己的层**：只影响这一个会话、
+  下一步生效、磁盘一个字节都不改。两个会话可同时使用不同分组，互不干扰。
+  实机验证（0.1.7-rc.1、`standard` 预设、未作者化）：全局层 0 个技能 / 会话层 71 个；
+  全局层注册遮蔽**无效**（控制实验），会话层注册遮蔽**有效且可逆**；第二会话不受第一会话遮蔽影响。
+- **能力探测与自动回退**：首个会话上注册一个不可见探针并读回该会话视图来验证机制；
+  失败、或 DSH 无分层能力（< 0.1.7）、或配置 `engine: "rename"` 时，自动退回原有 rename 引擎。
+  `skillmg_get_config` / `get-config` 新增 `engine` 与 `scopeEngine` 诊断字段。
+- **一次性磁盘规范化**：scope 引擎需要从官方 provider 取到真实定义才能遮蔽，因此首次启用时把
+  历史 `SKILL.md.disable` 改回 `SKILL.md`（`state.scopeNormalized` 记录），此后切组不再触碰磁盘。
+- 用户手册技能的版本标记（`<!-- skill-manager-guide: v2 -->`）：旧文案会被自动刷新，无需手动删文件。
+
+### Fixed
+
+- **同步性能：O(N²) → 线性**。注册表对读取有缓存而每次 `register` 都会使其失效，
+  原先"抓一个定义就注册一个遮蔽"导致每次抓取都重新收集整个技能目录；实测 69 个遮蔽耗时
+  **18.2 秒**，而这段同步发生在 `agent/created` 内（推迟会话开始）。改为**先批量抓定义、再批量注册**。
+- 诊断噪声：无法取到定义的技能若本来就不可发现，不再逐条告警（只报告"仍然可见但无法遮蔽"的名字）。
+
+### Changed
+
+- 分组语义（scope 引擎下）：选择器与默认组**不再重排磁盘**；`disabled` 在磁盘上恒为空，
+  UI 的"已停用数量"改为按当前分组动态计算出的隐藏数量。`lastActive` 仅作历史展示。
+
 ## [1.2.1] - 2026-09-24
 
 ### Fixed

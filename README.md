@@ -43,17 +43,27 @@ bash scripts/install.sh
 3. 点「设为默认」→ 所有会话的技能目录立即切换为该分组；
 4. 想让 AI 自己管？直接对它说「把 xxx 技能分到 xxx 组」即可。
 
-## ⚠️ 让分组启停真正生效（skill-only 预设）
+## ⚠️ 技能可见性：两套引擎（skill-only 预设已非必需）
 
-DSH 默认从多个根合并加载技能（`~/.agents/skills`、项目根、bundled 等）。分组启停只作用于导入目标那一份，若同一技能还能从别的根被发现，切组就不会生效。解决：给 DSH 一个只从 `$DSH_HOME/skills` 发现技能的 agent preset，仓库提供一键脚本：
+插件控制"模型能看到哪些技能"有两套引擎，启动时自动选择（`skillmg_get_config` 的 `engine` 字段可查）：
+
+| 引擎 | 何时使用 | 行为 |
+| :--- | :--- | :--- |
+| **scope（新，推荐）** | DSH ≥ 0.1.7 且按会话分层可用（启动时自动探测） | 在**每个会话自己的注册表层**里隐藏/放行技能：选组**只影响这一个会话**、下一步生效、**完全不动磁盘**；两个会话可同时使用不同分组 |
+| rename（旧，自动回退） | 探测失败，或配置 `engine: "rename"` | 原子改名 `SKILL.md` ⇄ `SKILL.md.disable` 控制可见性：**全局生效**，切组会重排磁盘 |
+
+scope 引擎下磁盘必须保留可发现的 `SKILL.md`（引擎需要先从官方 provider 取到真实定义才能遮蔽它），
+因此首次启用会把历史 `.disable` 文件改回来**一次**，此后切组不再触碰磁盘。
+
+**旧引擎仍需要 skill-only 预设**：DSH 默认从多个根合并加载技能（`~/.agents/skills`、项目根、bundled），改名只作用于导入目标那一份，其他根里同名技能照样能被发现。需要 multi-root 兼容时运行：
 
 ```bash
 node scripts/apply-skill-only-preset.mjs             # 追加 skill-only 预设，并设为默认
 node scripts/apply-skill-only-preset.mjs --refresh   # DSH 升级后重新对齐官方插件表
-node scripts/apply-skill-only-preset.mjs --dry-run   # 只看会写入什么
+bash scripts/install.sh                              # 或 install.ps1：装完会提示这一步
 ```
 
-脚本从**你本机已安装的** `@deepseek-ai/dsh-web-app/presets/standard.patch.yml` 复制完整能力表，只把其中的 `skill-filesystem` 改成单一根（`includeDefaultRoots: false` + `customSkillDirs: [导入目标]`），因此 DSH 升级后不会和官方预设漂移；写前自动备份该 profile 的 `cordis.patch.yml`。之后**完全重启 `dsh web`**。原理见 [docs/how-it-works.md](docs/how-it-works.md#5-多根加载问题与-skill-only-预设)。
+脚本从**你本机已安装的** `@deepseek-ai/dsh-web-app/presets/standard.patch.yml` 复制完整能力表，只把 `skill-filesystem` 改成单一根（`includeDefaultRoots: false` + `customSkillDirs: [导入目标]`），因此 DSH 升级后不会和官方预设漂移；写前自动备份该 profile 的 `cordis.patch.yml`。之后**完全重启 `dsh web`**。原理见 [docs/how-it-works.md](docs/how-it-works.md#8-按会话的可见性引擎scope-engine)。
 
 > **DSH 版本差异**：0.1.7 起，预设是 profile 组合里的**声明式行**（`@deepseek-ai/dsh-agent-preset`），默认值来自 `agent-preset-registry` 行的 `config.default`；0.1.6 及更早则是 `$DSH_HOME/.agent-presets/<id>/` 目录 + `settings.yaml` 的 `agent-presets.default`。**旧目录形式在 0.1.7 已被完全移除**（`settings.yaml` 也只剩 `settings.yaml.imported`），继续留在那里会让会话恢复直接失败：`Unknown agent preset: <id> (gateway/internal)`。
 
@@ -67,8 +77,10 @@ node scripts/apply-skill-only-preset.mjs --dry-run   # 只看会写入什么
 | `importTarget` | 导入目标，默认 `$DSH_HOME/skills` |
 | `groups` | 分组数组：`{id, name, skills: [{name, enabled}]}` |
 | `defaultGroup` | 默认分组 id；`null` = 全部启用；`__all_off__` = 全部禁用 |
-| `perSessionGroups` | 会话级分组覆盖（当前仅记录，模型目录仍由默认组决定） |
-| `disabled` | 当前禁用技能集合（dirName → true） |
+| `perSessionGroups` | 会话级分组；scope 引擎下**每个会话独立生效**，rename 引擎下仅记录 |
+| `disabled` | 禁用清单（rename 引擎的磁盘状态；scope 引擎下为空） |
+| `engine` | `"auto"`（默认，自动探测）/ `"scope"` / `"rename"` |
+| `scopeNormalized` | scope 引擎是否已完成"把 `.disable` 改回来"的一次性迁移 |
 
 ## AI 自主管理（`skillmg_*` 工具）
 

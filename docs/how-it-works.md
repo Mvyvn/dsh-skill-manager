@@ -127,7 +127,51 @@ node scripts/apply-skill-only-preset.mjs --refresh    # DSH 升级后重新对�
 
 | 本插件 | DSH 官方概念 |
 | --- | --- |
-| `SKILL.md.disable` | 被改名隐藏的技能目录 |
-| `disabled` 集合 | 插件维护的禁用清单（dirName → true） |
-| 默认组 | 决定所有会话模型目录的分组 |
+| `SKILL.md.disable` | 被改名隐藏的技能目录（仅 rename 引擎使用） |
+| `disabled` 集合 | 插件维护的磁盘禁用清单（dirName → true；scope 引擎下为空） |
+| 默认组 | 未单独选组的会话所用的分组 |
 | `__all_off__` | 保留 id：全部禁用（空技能目录） |
+
+## 8. 按会话的可见性引擎（scope engine）
+
+> 适用 DSH ≥ 0.1.7；探测失败时自动回退到第 5 节的 rename + skill-only 预设方案。
+
+### 为什么改名不再是唯一办法
+
+DSH 的技能注册表是**按 scope 分层**的（`@deepseek-ai/dsh-scope` + `dsh-skill`）：
+
+- 一次读取 = 全局层 + 观察者 scope 链上的各层合并；
+- **跨层同名由"更近的层"直接胜出，rank 只在同一层内比**；
+- 一个会话（agent）本身就是一个 scope key，它的父级是所属预设的那一层。
+
+实测（0.1.7-rc.1，`standard` 预设会话）：本会话 71 个技能**全部来自预设层**，全局层 0 个；
+把同名条目（`invocation.modelInvocable = false`）注册进**全局层**，技能仍然可见；
+注册进**该会话自己的层**（`agent.ctx.get('skills')`），技能立刻消失，dispose 后立刻恢复。
+
+所以"哪一个会话看到哪些技能"可以在内存里按会话决定，**不需要动磁盘、也不需要自定义预设**。
+
+### 实现要点
+
+| 环节 | 做法 |
+| --- | --- |
+| 挂载点 | `agent/created`（serial，先于该会话第一步）建立会话状态；`agent/pre-step` 做增量校准 |
+| 取句柄 | `agent.ctx.get('skills')`（必须用 `get`，直接 `agent.ctx.skills` 在未声明 inject 时会抛错） |
+| 能力探测 | 首个会话上注册一个不可见探针条目 → 读该会话视图 → 看到即证明可用；随后立即移除 |
+| 抓定义 | 遮蔽前用官方 provider 取回真实定义（`content`/`path`/`resourceBase`/`source`），保证资源路径不丢 |
+| 遮蔽 | 同名注册 + `modelInvocable: false` + 极短占位正文（省内存；真被加载时显示"当前分组已停用"） |
+| 磁盘 | 一次性把历史 `.disable` 改回 `SKILL.md`（否则定义取不到），此后不再改 |
+| 释放 | 双 owner：注册的 disposer 存在插件 `dispose` 里，插件卸载或会话销毁都会撤销 |
+
+### 性能：必须是"先全抓、再全注册"
+
+注册表对**读取**有缓存（键含 revision），而每次 `register` 都会让该缓存失效。
+因此"抓一个、注册一个"会让每次抓取都重新收集整个目录 → **O(N²)**。
+实测 69 个遮蔽：交错执行 **18.2s**；改成先批量抓定义、再批量注册后降到线性量级。
+这一次同步发生在 `agent/created` 内（会推迟会话开始），所以这个顺序是硬要求。
+
+### 仍未解决/需权衡
+
+- 依赖"`agent.ctx` 是会话层载体 + `skills.register` 语义"两条已文档化事实的**组合**，官方没有一句话直接承诺；故保留 rename 引擎自动回退。
+- 会话开始后若有人手改 `SKILL.md`，已抓取的遮蔽定义仍是旧的（下次配置变更/新会话才刷新）。
+- 分组政策是"以插件扫描到的技能为全集做白名单"：项目本地与 bundled 技能不在全集内，不受分组影响。
+- 子代理是独立 agent，会各自建立自己的可见集合。
