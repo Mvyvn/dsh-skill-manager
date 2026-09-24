@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-09-24
+
+### Fixed
+
+- **单根预设（skill-only）下插件自带的指南技能不可见** —— `skill-grouping` 原先只写入
+  `sourceDirs[0]`（默认 `~/.agents/skills`），而导入目标里那一份会被分组同步改名停用；
+  skill-only 预设只发现导入目标，于是模型在会话里看不到 `skillmg_*` 工具的唯一说明，
+  也就无法自主管理技能。现在改为**同时写入导入目标**（`importTarget`）与来源目录，并把
+  指南加入分组同步的**豁免名单**：任何分组（含 `__all_off__`）都不会把它改名为
+  `SKILL.md.disable`，`state.disabled` 里也会清除它的记录。代价是每个会话多约 4KB。
+
 ## [1.2.0] - 2026-09-24
 
 ### Added
