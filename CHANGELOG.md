@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-09-24
+
+### Fixed
+
+- **0.1.7 下插件完全无法激活**：Cordis 对"未在 `inject` 中声明的服务"在**属性访问**时抛错
+  （`cannot get property "register" without inject`）。1.3.0 新增的引擎在 `apply()` 尾部打印
+  engine 时调用 `scopeMode()` → `optimistic()` → 访问 `skills.register`，而插件只 inject 了
+  `['connection','tools']`，于是 `apply()` 在注册工具/RPC **之前**抛错，整行激活失败：
+  `skillmg_*` 工具消失、配置不再写入、磁盘不做一次性规范化。同一原因也让
+  `skillmg_debug_catalog` 一直返回 `snapshotError`（那里有 try/catch，所以只是静默失败）。
+  修复：`inject` 增加 `'skills'`（插件确实需要技能注册表），并给能力探测加 try/catch ——
+  服务不可访问时只降级为 rename 引擎，绝不导致激活失败。
+  用隔离 harness 复现并验证（抛错型 service Proxy → 修复前 apply 抛错、修复后正常降级；
+  正常 mock 服务 → `engine=scope` 且三个监听注册成功）。
 ## [1.3.0] - 2026-09-24
 
 ### Added
